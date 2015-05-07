@@ -24,7 +24,7 @@ clear
 %DEFINE PARAMETERS
 t_end = 5000;%ms
 dt =.1;%ms
-tau_e = 20%ms
+tau_e = 20;%ms
 tau_weights = 20;
 w_post_pre = zeros(1,t_end);%weight of the presynaptic cell onto the postsynaptic cell
 w_post_pre(1) = .5;
@@ -33,10 +33,10 @@ PSP_var_0 = (0/tau_e^2)*exp(0/tau_e);
 %USER MODIFIED INPUTS
 
 cc = .5;%c_c: strength of input from retinal ganglion cells
-cf = .5%level of inhibitory input to postsynaptic cell
+cf = .5;%level of inhibitory input to postsynaptic cell
 
 t_vec = 0:dt:t_end;
-r_ex_L =zeros(1,length(t_end))
+r_ex_L =zeros(1,length(t_end));
 r_mean = 5;%hz
 %rate_vec = r_mean * exp(-.5 * ((angle_vec - theta_max)./sigma_r) .^2);
 A_plus = 0.003;%magnitude of LTP
@@ -44,7 +44,9 @@ A_minus = .003/.99;%magnitude of LTD
 delta_w = 0;
 delta_g_ex = .6;% made up
 delta_g_inh = .5;% made up
-r_base = 10*(1-cf) %base inhibitory rate 
+r_base = 10*(1-cf); %base inhibitory rate 
+num_ex = 1; %number of excitatory synapses onto inhibitory/postsynaptic cell
+num_inh = 1; %number of inhibitory synapses onto postsynaptic cell
 
 
 
@@ -74,7 +76,7 @@ for i=1:t_end/dt
     t = t_vec(i);
     %changing the value of PSP_var (E)
     if t>=0
-        tau_e = 20%ms
+        tau_e = 20;%ms
         PSP_var(i) = (t/tau_e^2)*exp(-t/tau_e);
         
     else
@@ -124,8 +126,47 @@ for i=1:t_end/dt
     num_vec = rand(1,t_end/dt);
     spike_train_R_lay2((r_ex_R/1000)*dt > num_vec(1:i)) = 1;
     %plot(dt:dt:t_end, spike_train_vec_L)
+    
+    %calculate RATE OF INHIBITORY GROUP
+    sum_inh_L = 0;
+    sum_inh_R = 0;
+    for syn = 1:num_ex
+        for f = 1:i
+            if spike_train_L_lay2(f) ==1
+                if f == i
+                    sum_inh_L = PSP_var_0 + r_base + sum_inh_L;
+                else
+                    sum_inh_L = PSP_var(i - f) + r_base + sum_inh_L;
+                end
+            end
+            
+            if spike_train_R_lay2(f) == 1
+                if spike_train_L_lay2(f) == 1
+                    if f == i
+                        sum_inh_R = PSP_var_0 + r_base + sum_inh_R;
+                    else
+                        sum_inh_R = PSP_var(i - f) + r_base + sum_inh_R;
+                    end
+                end
+            end
+        end
+    end
+    
+    sum_inh = sum_inh_L +sum_inh_R;
+    r_inh(i) = sum_inh *cf/(num_ex*2); %2 because 2 groups of excitatory inputs
+    %it makes sense that there are more spikes later on, because as t is
+    %farther from arrival time of f, epsilon gets smaller, so at the
+    %beginning of the spike train, you have rate =  a bunch of higher
+    %values/#syn.  Later, you have rate = even more higher values (b/c lay2 ex cells also increase rate for the same reasons) and many
+    %low values (from long past spikes)/#syn
+    
+    %GENERATE POISSON MODEL SPIKE TRAIN from INH INPUTS
+    %figure;
+    spike_train_inh = zeros(1,t_end/dt);
+    num_vec = rand(1,t_end/dt);
+    spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
+    plot(dt:dt:t_end, spike_train_inh)
 
-    %calculate r_inh also in this loop
     
     %define change in conductances here
     %define V of the postsynaptic cell here
