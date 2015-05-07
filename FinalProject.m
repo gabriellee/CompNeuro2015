@@ -166,6 +166,33 @@ for i=1:t_end/dt
     num_vec = rand(1,t_end/dt);
     spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
     plot(dt:dt:t_end, spike_train_inh)
+    
+    %CALCULATE POSTSYNAPTIC VOLTAGE
+    %assume that a change in weight only affects the next time step
+    for synE = 1:num_ex
+        v_vec(i) = 
+        if v_vec(i) >= -54 %mV
+            v_vec(i+1) = -60; %mV
+            %calculate a change in weights
+            delta_t = find(fliplr(spike_train_L_lay2) > fliplr(spike_train_R_lay2));
+            if delta_t == 0
+                delta_w = 0;
+            elseif delta_t > 0
+                delta_w = A_plus * exp(-delta_t/tau_weights);
+            elseif delta_t < 0
+                delta_w = -A_minus*exp(delta_t/tau_weights);
+        for synI = 1:num_inh
+            %calculate gs (for each ex and inh synapse)
+            %calculate Is (for each ex and inh synapse)
+        end
+    
+    end
+    %calculate voltage!!!
+    
+    %strategy: use first weight to calculate initial voltage and see if
+    %spike.  Kepp doing this until there is a spike, then use the weight
+    %update rule
+
 
     
     %define change in conductances here
