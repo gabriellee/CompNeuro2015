@@ -2,10 +2,22 @@
 %Gabrielle Ewall, Kirsi Goldynia
 %4-16-15
 
-%determine the effect of varying inhibition on ocular dominance competition
+%generate poisson spike trains for the first layer of input from each
+%eye
+%calculate the firing rate at each point in time of both 'Excitatory Inputs'
+    %this is done using the first layer poisson spike trains
+%generate poisson trains for each group of layer 2 'Excitatory Inputs'
+%using the rates
+%use spike times to find conductance values vector
+%plug conductances into v=IR for both groups of excitatory, andinhibitory
+%inputs onto the postsynaptic cell
+%calculate the total current onto postsynaptic cell
+%plug into the LIF update rule
 
+%determine the effect of varying inhibition on ocular dominance competition
+clear
 %DEFINE PARAMETERS
-t_end = 100000;%ms
+t_end = 5000;%ms
 dt =.1;%ms
 tau_e = 20%ms
 tau_weights = 20;
@@ -19,18 +31,34 @@ r_mean = 5;%hz
 A_plus = 0.003;%magnitude of LTP
 A_minus = .003/.99;%magnitude of LTD
 delta_w = 0;
+delta_g_ex = .6;% made up
+delta_g_inh = .5;% made up
 
 %define temporal change in PSPs (epsilon)
 %generate poisson spike distribution using the mean rate to determine when
 %the next spike will occur
 %use code from PS4
 
-%GENERATE POISSON MODEL SPIKE TRAIN
+%GENERATE POISSON MODEL SPIKE TRAIN from LEFT EYE
+%figure;
+spike_train_vec = zeros(1,t_end/dt);
+num_vec = rand(1,t_end/dt);
+spike_train_vec((r_mean/1000)*dt > num_vec) = 1;
+%plot(dt:dt:t_end, spike_train_vec)
+
+%GENERATE POISSON MODEL SPIKE TRAIN from LEFT EYE
 figure;
-spike_train_vec = zeros(t_end*dt);
-num_vec = rand(1,t_end*dt);
-spike_train_vec(r_mean*dt > num_vec) = 1;
-plot(spike_train_vec)
+spike_train_vec = zeros(1,t_end/dt);
+num_vec = rand(1,t_end/dt);
+spike_train_vec((r_mean/1000)*dt > num_vec) = 1;
+plot(dt:dt:t_end, spike_train_vec)
+
+% %GENERATE POISSON MODEL SPIKE TRAIN for excitatory inputs
+% spike_trainE_vec = zeros(t_end/dt);
+% num_vec = rand(1,t_end*dt);
+% spike_trainE_vec(r_mean*dt > num_vec) = 1;
+% plot(dt:dt:t_end, spikeE_train_vec)
+
 
 % %finding rates
 % for i=1:t_end*dt
