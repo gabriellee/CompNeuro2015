@@ -26,8 +26,10 @@ t_end = 5000;%ms
 dt =.1;%ms
 tau_e = 20;%ms
 tau_weights = 20;
-w_post_pre = zeros(1,t_end);%weight of the presynaptic cell onto the postsynaptic cell
-w_post_pre(1) = .5;
+w_L = zeros(1,t_end);%weight of the presynaptic cell onto the postsynaptic cell
+w_L(1) = .5;
+w_R = zeros(1,t_end);
+w_R(1) = .5;
 PSP_var_0 = (0/tau_e^2)*exp(0/tau_e);
 
 %USER MODIFIED INPUTS
@@ -47,7 +49,14 @@ delta_g_inh = .5;% made up
 r_base = 10*(1-cf); %base inhibitory rate 
 num_ex = 1; %number of excitatory synapses onto inhibitory/postsynaptic cell
 num_inh = 1; %number of inhibitory synapses onto postsynaptic cell
-
+gbar_ex = .015;
+tau_ex = 5;
+gbar_inh = .005;
+tau_inh = 10; %ms
+E_ex = 0;%mV
+E_inh = -80;%mV
+g_leak = 1;
+E_leak = -74;%mV
 
 
 %define temporal change in PSPs (epsilon)
@@ -169,25 +178,57 @@ for i=1:t_end/dt
     
     %CALCULATE POSTSYNAPTIC VOLTAGE
     %assume that a change in weight only affects the next time step
+    V(1) = -60;%mV, made up
     for synE = 1:num_ex
-        v_vec(i) = 
-        if v_vec(i) >= -54 %mV
-            v_vec(i+1) = -60; %mV
-            %calculate a change in weights
-            delta_t = find(fliplr(spike_train_L_lay2) > fliplr(spike_train_R_lay2));
+        
+        if V(i) >= -54 %mV
+            V(i+1) = -60; %mV
+            
+            %LEFT WEIGHT
+            delta_t = dt* (find(fliplr(spike_train_L_lay2),1) - 1);
             if delta_t == 0
                 delta_w = 0;
             elseif delta_t > 0
                 delta_w = A_plus * exp(-delta_t/tau_weights);
             elseif delta_t < 0
                 delta_w = -A_minus*exp(delta_t/tau_weights);
+            w_L(i+1) = delta_w + w_L(i);
+            end
+            
+            
+            %RIGHT WEIGHT
+            delta_t = dt* (find(fliplr(spike_train_R_lay2),1) - 1);
+            if delta_t == 0
+                delta_w = 0;
+            elseif delta_t > 0
+                delta_w = A_plus * exp(-delta_t/tau_weights);
+            elseif delta_t < 0
+                delta_w = -A_minus*exp(delta_t/tau_weights);
+            w_R(i+1) = delta_w + w_R(i);
+            end
+        end
+            
         for synI = 1:num_inh
             %calculate gs (for each ex and inh synapse)
+            g_ex_L = gbar_ex * w_L(i +1) * exp(-t/tau_ex);
+            g_ex_R = gbar_ex * w_R(i+1) * exp(-t/tau_ex);
+
+            g_inh = gbar_inh * (exp(1)/tau_inh)*t*exp(-t/tau_inh);
+            
+            
             %calculate Is (for each ex and inh synapse)
+            V = -50;
+            I_ex_L = -g_ex_L *(V(i+1) -E_ex);
+            I_ex_R = -g_ex_R * (V(i+1) -E_ex);
+            I_inh = -g_inh * (V(i+1) -E_inh);
         end
     
     end
     %calculate voltage!!!
+    I_total = I_inh+I_ex_L +I_ex_R;
+    V_inf = -I_total/(g_leak*(-E_leak + 1));
+    tau_eff = tau_m/(g_leak*(-E_leak + 1));
+    V(i+1) = V_inf + (V(1) - V_inf)*exp(-t/tau_eff);
     
     %strategy: use first weight to calculate initial voltage and see if
     %spike.  Kepp doing this until there is a spike, then use the weight
