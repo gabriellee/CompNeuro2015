@@ -22,13 +22,14 @@
 %determine the effect of varying inhibition on ocular dominance competition
 clear
 %DEFINE PARAMETERS
-t_end = 5000;%ms
+%t_dep*5 = 5000;%ms
+t_dep = 500*1000;
 dt =.1;%ms
 tau_e = 20;%ms
 tau_weights = 20;
-w_L = zeros(1,t_end/dt);%weight of the presynaptic cell onto the postsynaptic cell
+w_L = zeros(1,t_dep*5/dt);%weight of the presynaptic cell onto the postsynaptic cell
 w_L(1) = .5;
-w_R = zeros(1,t_end/dt);
+w_R = zeros(1,t_dep*5/dt);
 w_R(1) = .5;
 PSP_var_0 = (0/tau_e^2)*exp(0/tau_e);
 tau_m = 20;
@@ -41,8 +42,8 @@ delta_cc_test = [.2 .4 .5];
 cc = .5;%c_c: strength of input from retinal ganglion cells
 cf = .5;%level of inhibitory input to postsynaptic cell
 
-t_vec = 0:dt:t_end;
-r_ex_L =zeros(1,length(t_end));
+t_vec = 0:dt:t_dep*5;
+r_ex_L =zeros(1,length(t_dep*5));
 r_mean = 5;%hz
 %rate_vec = r_mean * exp(-.5 * ((angle_vec - theta_max)./sigma_r) .^2);
 A_plus = 0.003;%magnitude of LTP
@@ -61,16 +62,24 @@ E_ex = 0;%mV
 E_inh = -80;%mV
 g_leak = 1;
 E_leak = -74;%mV
-t_dep;
+t_dep = 5*1000;
+tau_e = 20;%ms
+spike_train_L_lay2 = zeros(1,t_dep*5/dt);
+spike_train_R_lay2 = zeros(1,t_dep*5/dt);
 
+
+%changing the value of PSP_var (E)
+PSP_var = zeros(length(t_dep*5/dt));
+PSP_var(t_vec >= 0) = (t_vec(t_vec >= 0)/tau_e^2).*exp(-t_vec(t_vec >= 0)/tau_e);
 
 %define temporal change in PSPs (epsilon)
 %generate poisson spike distribution using the mean rate to determine when
 %the next spike will occur
 %use code from PS4
 for delta_cc = delta_cc_test
-    cc_vec_L = zeros(1,t_end/dt);
-    cc_vec_R = zeros(1,t_end/dt);
+    tic
+    cc_vec_L = zeros(1,t_dep*5/dt);
+    cc_vec_R = zeros(1,t_dep*5/dt);
 
     cc_vec_L(1:t_dep/dt) = cc;
     cc_vec_L(t_dep/dt:t_dep*2/dt) = cc - delta_cc;
@@ -91,40 +100,24 @@ for delta_cc = delta_cc_test
     
     %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EYE
     %figure;
-    spike_train_vec_L = zeros(1,t_end/dt);
-    num_vec = rand(1,t_end/dt);
+    num_vec = rand(1,t_dep*5/dt);
     spike_train_vec_L((r_mean/1000)*dt > num_vec) = 1;
-    %plot(dt:dt:t_end, spike_train_vec_L)
+    %plot(dt:dt:t_dep*5, spike_train_vec_L)
 
     %GENERATE POISSON MODEL SPIKE TRAIN from RIGHT EYE
     %figure;
-    spike_train_vec_R = zeros(1,t_end/dt);
-    num_vec = rand(1,t_end/dt);
+    num_vec = rand(1,t_dep*5/dt);
     spike_train_vec_R((r_mean/1000)*dt > num_vec) = 1;
-    %plot(dt:dt:t_end, spike_train_vec_R)
+    %plot(dt:dt:t_dep*5, spike_train_vec_R)
 
-
+    
     %finding rates
-    for i=1:(t_end/dt - 1)
+
+    for i=1:(t_dep*5/dt - 1)
         temp_sum = 0;
         t = t_vec(i);
-        %changing the value of PSP_var (E)
-        if t>=0
-            tau_e = 20;%ms
-            PSP_var(i) = (t/tau_e^2)*exp(-t/tau_e);
 
-        else
-            PSP_var(i) = 0;
-        end
-        %changing weights
-        if t > 0
-            delta_w = A_plus * exp(-dt/tau_weights);%delta t is btw pre and psot
-        elseif t < 0
-            delta_w = -A_minus * exp(dt/tau_weights);
-        else
-            delta_w = 0;
-        end
-
+       
         sum_ex_L = 0;
         sum_ex_R = 0;
         for f = 1:i
@@ -142,24 +135,29 @@ for delta_cc = delta_cc_test
                     sum_ex_R = PSP_var(i - f) + r_base + sum_ex_R;
                 end
             end
+            disp('139')
+            toc
         end
+        disp('149')
+        toc
 
         r_ex_L(i) = sum_ex_L * cc_vec_L(i);
         r_ex_R(i) = sum_ex_R * cc_vec_R(i);
+    end
 
-        %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EX INPUTS
-        %figure;
-        spike_train_L_lay2 = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
-        spike_train_L_lay2((r_ex_L/1000)*dt > num_vec(1:i)) = 1;
-        %plot(dt:dt:t_end, spike_train_vec_L)
+    %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EX INPUTS
+    %figure;
+    num_vec = rand(1,t_dep*5/dt);
+    spike_train_L_lay2((r_ex_L/1000)*dt > num_vec) = 1;
+    %plot(dt:dt:t_dep*5, spike_train_vec_L)
 
-        %GENERATE POISSON MODEL SPIKE TRAIN from RIGHT EX INPUTS
-        %figure;
-        spike_train_R_lay2 = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
-        spike_train_R_lay2((r_ex_R/1000)*dt > num_vec(1:i)) = 1;
-        %plot(dt:dt:t_end, spike_train_vec_L)
+    %GENERATE POISSON MODEL SPIKE TRAIN from RIGHT EX INPUTS
+    %figure;
+    num_vec = rand(1,t_dep*5/dt);
+    spike_train_R_lay2((r_ex_R/1000)*dt > num_vec) = 1;
+    %plot(dt:dt:t_dep*5, spike_train_vec_L)
+        
+    for i = 1:(t_dep*5/dt -1)
 
         %calculate RATE OF INHIBITORY GROUP
         sum_inh_L = 0;
@@ -196,18 +194,18 @@ for delta_cc = delta_cc_test
 
         %GENERATE POISSON MODEL SPIKE TRAIN from INH INPUTS
         %figure;
-        spike_train_inh = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
+        spike_train_inh = zeros(1,t_dep*5/dt);
+        num_vec = rand(1,t_dep*5/dt);
         spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
-        plot(dt:dt:t_end, spike_train_inh)
+        plot(dt:dt:t_dep*5, spike_train_inh)
     end
 
 
 
     %CALCULATE POSTSYNAPTIC VOLTAGE
     %assume that a change in weight only affects the next time step
-    for i = 1:t_end/dt - 1
-        V = zeros(1,t_end/dt);
+    for i = 1:t_dep*5/dt - 1
+        V = zeros(1,t_dep*5/dt);
         V(1) = -60;%mV, made up
         for synE = 1:num_ex
 
@@ -223,6 +221,7 @@ for delta_cc = delta_cc_test
                 elseif delta_t < 0
                     delta_w = -A_minus*exp(delta_t/tau_weights);
                 w_L(i+1) = delta_w + w_L(i);
+                delta_w
                 end
 
 
@@ -270,21 +269,21 @@ for delta_cc = delta_cc_test
     end
     figure;
     hold on
-    plot(0:dt:t_end, w_L)
-    plot(0:dt:t_end, w_R)
+    plot(0:dt:t_dep*5, w_L)
+    plot(0:dt:t_dep*5, w_R)
     legend('Left','Right')
     title(strcat('delta cc = ',num2str(delta_cc)));
     figure;
     hold on;
-    plot(0:dt:t_end, w_L,'o')
-    plot(0:dt:t_end, w_R,'o')
+    plot(0:dt:t_dep*5, w_L,'o')
+    plot(0:dt:t_dep*5, w_R,'o')
     legend('Left','Right')
 end
-plot()
 
-delta_cc = .5
-cc_vec_L = zeros(1,t_end/dt);
-cc_vec_R = zeros(1,t_end/dt);
+
+delta_cc = .5;
+cc_vec_L = zeros(1,t_dep*5/dt);
+cc_vec_R = zeros(1,t_dep*5/dt);
 
 cc_vec_L(1:t_dep/dt) = cc;
 cc_vec_L(t_dep/dt:t_dep*2/dt) = cc - delta_cc;
@@ -300,31 +299,23 @@ cc_vec_R(t_dep*4/dt:t_dep*5/dt) = cc;
 for cf = cf_test_vec
     %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EYE
     %figure;
-    spike_train_vec_L = zeros(1,t_end/dt);
-    num_vec = rand(1,t_end/dt);
+    spike_train_vec_L = zeros(1,t_dep*5/dt);
+    num_vec = rand(1,t_dep*5/dt);
     spike_train_vec_L((r_mean/1000)*dt > num_vec) = 1;
-    %plot(dt:dt:t_end, spike_train_vec_L)
+    %plot(dt:dt:t_dep*5, spike_train_vec_L)
 
     %GENERATE POISSON MODEL SPIKE TRAIN from RIGHT EYE
     %figure;
-    spike_train_vec_R = zeros(1,t_end/dt);
-    num_vec = rand(1,t_end/dt);
+    spike_train_vec_R = zeros(1,t_dep*5/dt);
+    num_vec = rand(1,t_dep*5/dt);
     spike_train_vec_R((r_mean/1000)*dt > num_vec) = 1;
-    %plot(dt:dt:t_end, spike_train_vec_R)
+    %plot(dt:dt:t_dep*5, spike_train_vec_R)
 
 
     %finding rates
-    for i=1:(t_end/dt - 1)
+    for i=1:(t_dep*5/dt - 1)
         temp_sum = 0;
         t = t_vec(i);
-        %changing the value of PSP_var (E)
-        if t>=0
-            tau_e = 20;%ms
-            PSP_var(i) = (t/tau_e^2)*exp(-t/tau_e);
-
-        else
-            PSP_var(i) = 0;
-        end
         %changing weights
         if t > 0
             delta_w = A_plus * exp(-dt/tau_weights);%delta t is btw pre and psot
@@ -358,17 +349,17 @@ for cf = cf_test_vec
 
         %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EX INPUTS
         %figure;
-        spike_train_L_lay2 = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
+        spike_train_L_lay2 = zeros(1,t_dep*5/dt);
+        num_vec = rand(1,t_dep*5/dt);
         spike_train_L_lay2((r_ex_L/1000)*dt > num_vec(1:i)) = 1;
-        %plot(dt:dt:t_end, spike_train_vec_L)
+        %plot(dt:dt:t_dep*5, spike_train_vec_L)
 
         %GENERATE POISSON MODEL SPIKE TRAIN from RIGHT EX INPUTS
         %figure;
-        spike_train_R_lay2 = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
+        spike_train_R_lay2 = zeros(1,t_dep*5/dt);
+        num_vec = rand(1,t_dep*5/dt);
         spike_train_R_lay2((r_ex_R/1000)*dt > num_vec(1:i)) = 1;
-        %plot(dt:dt:t_end, spike_train_vec_L)
+        %plot(dt:dt:t_dep*5, spike_train_vec_L)
 
         %calculate RATE OF INHIBITORY GROUP
         sum_inh_L = 0;
@@ -405,18 +396,18 @@ for cf = cf_test_vec
 
         %GENERATE POISSON MODEL SPIKE TRAIN from INH INPUTS
         %figure;
-        spike_train_inh = zeros(1,t_end/dt);
-        num_vec = rand(1,t_end/dt);
+        spike_train_inh = zeros(1,t_dep*5/dt);
+        num_vec = rand(1,t_dep*5/dt);
         spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
-        plot(dt:dt:t_end, spike_train_inh)
+        plot(dt:dt:t_dep*5, spike_train_inh)
     end
 
 
 
     %CALCULATE POSTSYNAPTIC VOLTAGE
     %assume that a change in weight only affects the next time step
-    for i = 1:t_end/dt - 1
-        V = zeros(1,t_end/dt);
+    for i = 1:t_dep*5/dt - 1
+        V = zeros(1,t_dep*5/dt);
         V(1) = -60;%mV, made up
         for synE = 1:num_ex
 
@@ -479,14 +470,14 @@ for cf = cf_test_vec
     end
     figure;
     hold on
-    plot(0:dt:t_end, w_L)
-    plot(0:dt:t_end, w_R)
+    plot(0:dt:t_dep*5, w_L)
+    plot(0:dt:t_dep*5, w_R)
     legend('Left','Right')
     title(strcat('cf = ',num2str(cf)));
     figure;
     hold on;
-    plot(0:dt:t_end, w_L,'o')
-    plot(0:dt:t_end, w_R,'o')
+    plot(0:dt:t_dep*5, w_L,'o')
+    plot(0:dt:t_dep*5, w_R,'o')
     legend('Left','Right')
 end
 
