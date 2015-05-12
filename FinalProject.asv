@@ -31,7 +31,7 @@ w_L = zeros(1,t_dep*5/dt);%weight of the presynaptic cell onto the postsynaptic 
 w_L(1) = .5;
 w_R = zeros(1,t_dep*5/dt);
 w_R(1) = .5;
-%PSP_var_0 = (0/tau_e^2)*exp(0/tau_e);
+PSP_var_0 = (0/tau_e^2)*exp(0/tau_e);
 tau_m = 20;
 delta_cc = .5;
 cf_test_vec = [0 .2 .5 .8 1];
@@ -71,8 +71,11 @@ spike_train_R_lay2 = zeros(1,t_dep*5/dt);
 %changing the value of PSP_var (E)
 PSP_var = zeros(length(t_dep*5/dt));
 PSP_var(t_vec >= 0) = (t_vec(t_vec >= 0)/tau_e^2).*exp(-t_vec(t_vec >= 0)/tau_e);
-PSP_var = [(0/tau_e^2)*exp(0/tau_e) PSP_var];
 
+%define temporal change in PSPs (epsilon)
+%generate poisson spike distribution using the mean rate to determine when
+%the next spike will occur
+%use code from PS4
 
 %GENERATE POISSON MODEL SPIKE TRAIN from LEFT EYE
 %figure;
@@ -116,15 +119,15 @@ for delta_cc = delta_cc_test
         r_ex_L(i) = sum(PSP_var(i - spike_train_vec_L(1:i).*[1:i]+1) + r_base) * cc_vec_L(i);
         %spike_train_vec_L(1:i)*[1:i] results in a vector with the indices
         %of spikes
-        %add one to the index so that you don't have to index at zero when
-        %the spike is at time i*dt
+        %add one to the index so that you don't have to index from zero 
         
         
-        r_ex_R(i) = sum(PSP_var(i - spike_train_vec_R(1:i).*[1:i]+1) + r_base) * cc_vec_R(i);
+        r_ex_R(i) = sum(PSP_var(i - spike_train_vec_R(1:i).*[1:i]) + r_base) * cc_vec_R(i);
         
         disp('139')
         toc
-
+        disp('149')
+        toc
     end
 
 
