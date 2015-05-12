@@ -44,6 +44,8 @@ cf = .5;%level of inhibitory input to postsynaptic cell
 
 t_vec = 0:dt:t_dep*5;
 r_ex_L =zeros(1,length(t_dep*5));
+r_ex_R =zeros(1,length(t_dep*5));
+r_inh = zeros(1,length(t_dep*5));
 r_mean = 5;%hz
 %rate_vec = r_mean * exp(-.5 * ((angle_vec - theta_max)./sigma_r) .^2);
 A_plus = 0.003;%magnitude of LTP
@@ -85,92 +87,66 @@ spike_train_vec_L((r_mean/1000)*dt > num_vec) = 1;
 num_vec = rand(1,t_dep*5/dt);
 spike_train_vec_R((r_mean/1000)*dt > num_vec) = 1;
 %plot(dt:dt:t_dep*5, spike_train_vec_R)
-for delta_cc = delta_cc_test
-    tic
-    cc_vec_L = zeros(1,t_dep*5/dt);
-    cc_vec_R = zeros(1,t_dep*5/dt);
+delta_cc = delta_cc_test(1);
+tic
+cc_vec_L = zeros(1,t_dep*5/dt);
+cc_vec_R = zeros(1,t_dep*5/dt);
 
-    cc_vec_L(1:t_dep/dt) = cc;
-    cc_vec_L(t_dep/dt:t_dep*2/dt) = cc - delta_cc;
-    cc_vec_L(t_dep*2/dt:t_dep*3/dt) = cc;
-    cc_vec_L(t_dep*3/dt:t_dep*4/dt) = cc;
-    cc_vec_L(t_dep*4/dt:t_dep*5/dt) = cc;
+cc_vec_L(1:t_dep/dt) = cc;
+cc_vec_L(t_dep/dt:t_dep*2/dt) = cc - delta_cc;
+cc_vec_L(t_dep*2/dt:t_dep*3/dt) = cc;
+cc_vec_L(t_dep*3/dt:t_dep*4/dt) = cc;
+cc_vec_L(t_dep*4/dt:t_dep*5/dt) = cc;
 
-    cc_vec_R(1:t_dep/dt) = cc;
-    cc_vec_R(t_dep/dt:t_dep*2/dt) = cc;
-    cc_vec_R(t_dep*2/dt:t_dep*3/dt) = cc;
-    cc_vec_R(t_dep*3/dt:t_dep*4/dt) = cc - delta_cc;
-    cc_vec_R(t_dep*4/dt:t_dep*5/dt) = cc;
+cc_vec_R(1:t_dep/dt) = cc;
+cc_vec_R(t_dep/dt:t_dep*2/dt) = cc;
+cc_vec_R(t_dep*2/dt:t_dep*3/dt) = cc;
+cc_vec_R(t_dep*3/dt:t_dep*4/dt) = cc - delta_cc;
+cc_vec_R(t_dep*4/dt:t_dep*5/dt) = cc;
 
 
+
+%finding rates
+
+for i=1:(t_dep*5/dt - 1)
+    temp_sum = 0;
+    t = t_vec(i);
+
+
+    sum_ex_L = 0;
+    sum_ex_R = 0;
+    r_ex_L(i) = sum(PSP_var(i - spike_train_vec_L(1:i).*[1:i]+1) + r_base) * cc_vec_L(i);
+    %spike_train_vec_L(1:i)*[1:i] results in a vector with the indices
+    %of spikes
+    %add one to the index so that you don't have to index at zero when
+    %the spike is at time i*dt
+
+
+    r_ex_R(i) = sum(PSP_var(i - spike_train_vec_R(1:i).*[1:i]+1) + r_base) * cc_vec_R(i);
+
+    disp('139')
+    toc
+    %calculate RATE OF INHIBITORY GROUP
+    sum_inh_L = 0;
+    sum_inh_R = 0;
+    r_inh(i) = (sum(PSP_var(i - spike_train_L_lay2(1:i).*[1:i]+1) + r_base) +...
+        sum(PSP_var(i - spike_train_R_lay2(1:i).*[1:i]+1) + r_base)) * cf/(num_ex*2); %2 because 2 groups of excitatory inputs
     
-    %finding rates
+    %it makes sense that there are more spikes later on, because as t is
+    %farther from arrival time of f, epsilon gets smaller, so at the
+    %beginning of the spike train, you have rate =  a bunch of higher
+    %values/#syn.  Later, you have rate = even more higher values (b/c lay2 ex cells also increase rate for the same reasons) and many
+    %low values (from long past spikes)/#syn
+    
+    
+end
 
-    for i=1:(t_dep*5/dt - 1)
-        temp_sum = 0;
-        t = t_vec(i);
-
-       
-        sum_ex_L = 0;
-        sum_ex_R = 0;
-        r_ex_L(i) = sum(PSP_var(i - spike_train_vec_L(1:i).*[1:i]+1) + r_base) * cc_vec_L(i);
-        %spike_train_vec_L(1:i)*[1:i] results in a vector with the indices
-        %of spikes
-        %add one to the index so that you don't have to index at zero when
-        %the spike is at time i*dt
-        
-        
-        r_ex_R(i) = sum(PSP_var(i - spike_train_vec_R(1:i).*[1:i]+1) + r_base) * cc_vec_R(i);
-        
-        disp('139')
-        toc
-
-    end
-
-
-        
-    for i = 1:(t_dep*5/dt -1)
-
-        %calculate RATE OF INHIBITORY GROUP
-        sum_inh_L = 0;
-        sum_inh_R = 0;
-        for syn = 1:num_ex
-            for f = 1:i
-                if spike_train_L_lay2(f) ==1
-                    if f == i
-                        sum_inh_L = PSP_var_0 + r_base + sum_inh_L;
-                    else
-                        sum_inh_L = PSP_var(i - f) + r_base + sum_inh_L;
-                    end
-                end
-
-                if spike_train_R_lay2(f) == 1
-                    if spike_train_L_lay2(f) == 1
-                        if f == i
-                            sum_inh_R = PSP_var_0 + r_base + sum_inh_R;
-                        else
-                            sum_inh_R = PSP_var(i - f) + r_base + sum_inh_R;
-                        end
-                    end
-                end
-            end
-        end
-
-        sum_inh = sum_inh_L +sum_inh_R;
-        r_inh(i) = sum_inh *cf/(num_ex*2); %2 because 2 groups of excitatory inputs
-        %it makes sense that there are more spikes later on, because as t is
-        %farther from arrival time of f, epsilon gets smaller, so at the
-        %beginning of the spike train, you have rate =  a bunch of higher
-        %values/#syn.  Later, you have rate = even more higher values (b/c lay2 ex cells also increase rate for the same reasons) and many
-        %low values (from long past spikes)/#syn
-
-        %GENERATE POISSON MODEL SPIKE TRAIN from INH INPUTS
-        %figure;
-        spike_train_inh = zeros(1,t_dep*5/dt);
-        num_vec = rand(1,t_dep*5/dt);
-        spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
-        plot(dt:dt:t_dep*5, spike_train_inh)
-    end
+%GENERATE POISSON MODEL SPIKE TRAIN from INH INPUTS
+%figure;
+spike_train_inh = zeros(1,t_dep*5/dt);
+num_vec = rand(1,t_dep*5/dt);
+spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
+plot(dt:dt:t_dep*5, spike_train_inh)
 
 
 
@@ -250,7 +226,7 @@ for delta_cc = delta_cc_test
     plot(0:dt:t_dep*5, w_L,'o')
     plot(0:dt:t_dep*5, w_R,'o')
     legend('Left','Right')
-end
+
 
 
 delta_cc = .5;
