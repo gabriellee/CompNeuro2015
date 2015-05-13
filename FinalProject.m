@@ -36,6 +36,8 @@ tau_m = 20;
 delta_cc = .5;
 cf_test_vec = [0 .2 .5 .8 1];
 delta_cc_test = [.2 .4 .5];
+V = zeros(1,t_dep*5/dt);
+V(1) = -60;%mV, made up
 
 %USER MODIFIED INPUTS
 
@@ -71,7 +73,7 @@ spike_train_R_lay2 = zeros(1,t_dep*5/dt);
 
 
 %changing the value of PSP_var (E)
-PSP_var = zeros(length(t_dep*5/dt));
+PSP_var = zeros(1,t_dep*5/dt);
 PSP_var(t_vec >= 0) = (t_vec(t_vec >= 0)/tau_e^2).*exp(-t_vec(t_vec >= 0)/tau_e);
 PSP_var = [(0/tau_e^2)*exp(0/tau_e) PSP_var];
 
@@ -138,6 +140,7 @@ for i=1:(t_dep*5/dt - 1)
     %values/#syn.  Later, you have rate = even more higher values (b/c lay2 ex cells also increase rate for the same reasons) and many
     %low values (from long past spikes)/#syn
     
+
     
 end
 
@@ -148,15 +151,19 @@ num_vec = rand(1,t_dep*5/dt);
 spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
 plot(dt:dt:t_dep*5, spike_train_inh)
 
+delta_w_L(spike_train_L_lay2 == 1) = 
+%to get weights:
+%shift the pre train array over, 1:timewindow/dt times, and multiply each array
+%by the post spike train. use the 1s.  Add up all of the changes in
+%weight
+%delta_w vector is equal to the formula times the product
+%the final delta w vector is equal to the sum of those
 
 
     %CALCULATE POSTSYNAPTIC VOLTAGE
     %assume that a change in weight only affects the next time step
     for i = 1:t_dep*5/dt - 1
-        V = zeros(1,t_dep*5/dt);
-        V(1) = -60;%mV, made up
-        for synE = 1:num_ex
-
+        
             if V(i) >= -54 %mV
                 V(i+1) = -60; %mV
 
@@ -183,21 +190,32 @@ plot(dt:dt:t_dep*5, spike_train_inh)
                     delta_w = -A_minus*exp(delta_t/tau_weights);
                 w_R(i+1) = delta_w + w_R(i);
                 end
+
             end
 
-            for synI = 1:num_inh
-                %calculate gs (for each ex and inh synapse)
+            %change conductances if there was a presynaptic spike
+            if spike_train_L_lay2(i) == 1
+                g_ex_L = g_ex_L + gbar_ex;
+            else
                 g_ex_L = gbar_ex * w_L(i +1) * exp(-t/tau_ex);
-                g_ex_R = gbar_ex * w_R(i+1) * exp(-t/tau_ex);
-
-                g_inh = gbar_inh * (exp(1)/tau_inh)*t*exp(-t/tau_inh);
-
-
-                %calculate Is (for each ex and inh synapse)
-                I_ex_L = -g_ex_L *(V(i+1) -E_ex);
-                I_ex_R = -g_ex_R * (V(i+1) -E_ex);
-                I_inh = -g_inh * (V(i+1) -E_inh);
             end
+            if spike_train_R_lay2(i) == 1
+                g_ex_R = g_ex_R + gbar_ex;
+            else
+                g_ex_R = gbar_ex * w_R(i+1) * exp(-t/tau_ex);
+            end
+            if spike_train_inh(i) == 1
+                g_inh = g_inh + gbar_inh;
+            else
+                g_inh = gbar_inh * (exp(1)/tau_inh)*t*exp(-t/tau_inh);
+            end
+            
+               
+
+            %calculate Is (for each ex and inh synapse)
+            I_ex_L = -g_ex_L *(V(i+1) -E_ex);
+            I_ex_R = -g_ex_R * (V(i+1) -E_ex);
+            I_inh = -g_inh * (V(i+1) -E_inh);
 
         end
         %calculate voltage!!!
