@@ -15,7 +15,7 @@
 %plug conductances into v=IR for both groups of excitatory, andinhibitory
 %inputs onto the postsynaptic cell
 %calculate the total current onto postsynaptic cell
-%plug into the LIF update rule
+%plug into the LIF update rule 
 
 %do monocular deprivation
 
@@ -151,8 +151,7 @@ num_vec = rand(1,t_dep*5/dt);
 spike_train_inh((r_inh/1000)*dt > num_vec(1:i)) = 1;
 plot(dt:dt:t_dep*5, spike_train_inh)
 
-delta_w_L(spike_train_L_lay2 == 1) = 
-%to get weights:
+%another possible way to get weights:
 %shift the pre train array over, 1:timewindow/dt times, and multiply each array
 %by the post spike train. use the 1s.  Add up all of the changes in
 %weight
@@ -217,7 +216,7 @@ delta_w_L(spike_train_L_lay2 == 1) =
             I_ex_R = -g_ex_R * (V(i+1) -E_ex);
             I_inh = -g_inh * (V(i+1) -E_inh);
 
-        end
+        
         %calculate voltage!!!
         I_total = I_inh+I_ex_L +I_ex_R;
         V_inf = -I_total/(g_leak*(-E_leak + 1));
@@ -232,7 +231,7 @@ delta_w_L(spike_train_L_lay2 == 1) =
 
         %define change in conductances here
         %define V of the postsynaptic cell here
-    end
+        end
     figure;
     hold on
     plot(0:dt:t_dep*5, w_L)
@@ -406,18 +405,28 @@ for cf = cf_test_vec
                 end
             end
 
-            for synI = 1:num_inh
-                %calculate gs (for each ex and inh synapse)
+             %change conductances if there was a presynaptic spike
+            if spike_train_L_lay2(i) == 1
+                g_ex_L = g_ex_L + gbar_ex;
+            else
                 g_ex_L = gbar_ex * w_L(i +1) * exp(-t/tau_ex);
+            end
+            if spike_train_R_lay2(i) == 1
+                g_ex_R = g_ex_R + gbar_ex;
+            else
                 g_ex_R = gbar_ex * w_R(i+1) * exp(-t/tau_ex);
-
+            end
+            if spike_train_inh(i) == 1
+                g_inh = g_inh + gbar_inh;
+            else
                 g_inh = gbar_inh * (exp(1)/tau_inh)*t*exp(-t/tau_inh);
+            end
 
 
-                %calculate Is (for each ex and inh synapse)
-                I_ex_L = -g_ex_L *(V(i+1) -E_ex);
-                I_ex_R = -g_ex_R * (V(i+1) -E_ex);
-                I_inh = -g_inh * (V(i+1) -E_inh);
+            %calculate Is (for each ex and inh synapse)
+            I_ex_L = -g_ex_L *(V(i+1) -E_ex);
+            I_ex_R = -g_ex_R * (V(i+1) -E_ex);
+            I_inh = -g_inh * (V(i+1) -E_inh);
             end
 
         end
@@ -447,21 +456,4 @@ for cf = cf_test_vec
     plot(0:dt:t_dep*5, w_L,'o')
     plot(0:dt:t_dep*5, w_R,'o')
     legend('Left','Right')
-end
 
-%V  tracks the post synaptic cell
-    
-%cover the second group of excitatory
-%do basically the same for inhibitory
-%integrate over #spikes and #synapses
-
-%use the cha
-
-%define the changing weights
-%postsynaptic rates
-%integrate over #spikes and #synapses
-
-
-
-
-%run experiment
